@@ -1,7 +1,29 @@
 -- Constants
-local WID, HEI = 52,22
+local WID, HEI = 50,30
 local NCOUNT = WID * HEI
 local CELL_SIZE = 15 -- Adjust for screen scale
+-- lua arrays start at 1, so I can just write RGBA values in slots 1 to 9
+-- DEFAULT config
+-- 1 = brown
+-- 2 = maroon
+-- 3 = dark green
+-- 4 = cobalt
+-- 5 = purple
+-- 6 = yellow
+-- 7 = muted pink
+-- 8 = lime green
+-- 9 = cyan
+local COLORS = {
+	{ 90,  30,   0,  255},  
+	{150,   0,   0,  255},
+	{  0, 100,   0,  255},
+	{  0, 100, 170,  255},
+	{100,   0, 100,  255},
+	{210, 210,   0,  255},
+	{255,   0, 100,  255},
+	{100, 255,   0,  255},
+	{  0, 255, 200,  255}
+}
 
 -- Game State
 local board = {}
@@ -30,8 +52,11 @@ end
 -- Check if a move is valid
 function countSteps(steps, dx, dy)
     local tx, ty = cursor.x, cursor.y
+    -- look at each step along the delta
     for i = 1, steps do
+	-- increment along x
         tx = tx + dx
+	-- increment along y
         ty = ty + dy
         -- Bounds check and check if spot is already eaten (0)
         if tx < 1 or tx > WID or ty < 1 or ty > HEI or board[ty][tx] == 0 then
@@ -59,10 +84,13 @@ function execute(dx, dy)
 end
 
 function checkGameOver()
+    -- for all cells adjacent to cursor
     for dy = -1, 1 do
         for dx = -1, 1 do
+	    -- if cells are not already eaten
             if not (dx == 0 and dy == 0) then
                 local tx, ty = cursor.x + dx, cursor.y + dy
+		-- if adjacent space is uneaten and within bounds
                 if tx >= 1 and tx <= WID and ty >= 1 and ty <= HEI then
                     local steps = board[ty][tx]
                     if steps > 0 and countSteps(steps, dx, dy) then
@@ -92,14 +120,29 @@ function love.keypressed(key)
     end
 
     -- Key Mapping (Matching your QWE/A D/YXC layout)
-    if key == 'q' then execute(-1, -1)
+        if key == 'q' then execute(-1, -1)
     elseif key == 'w' then execute(0, -1)
     elseif key == 'e' then execute(1, -1)
     elseif key == 'a' then execute(-1, 0)
     elseif key == 'd' then execute(1, 0)
-    elseif key == 'y' or key == 'z' then execute(-1, 1) -- 'z' for QWERTZ/QWERTY comfort
+    elseif key == 'z' then execute(-1, 1)
     elseif key == 'x' then execute(0, 1)
     elseif key == 'c' then execute(1, 1)
+    elseif key == "escape" then love.event.quit()
+    end
+end
+
+function drawMovementStar(steps, dx, dy)
+    local tx,ty = cursor.x, cursor.y 
+    for i = 1, steps do
+	-- increment along x
+        tx = tx + dx
+	-- increment along y
+        ty = ty + dy
+        local val = board[ty][tx]
+        -- draw rectangle outline
+        love.graphics.rectangle("line", tx * CELL_SIZE, ty * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        love.graphics.print(val, tx * CELL_SIZE, ty * CELL_SIZE)
     end
 end
 
@@ -109,8 +152,8 @@ function love.draw()
         for x = 1, WID do
             local val = board[y][x]
             if val > 0 then
-                -- Mimic the C++ color logic (6 + i)
-                love.graphics.setColor(0.5, 0.4 + (val/10), 0.8)
+		color = COLORS[val]
+                love.graphics.setColor(love.math.colorFromBytes(color[1], color[2], color[3], color[4]))
                 love.graphics.print(val, x * CELL_SIZE, y * CELL_SIZE)
             end
         end
@@ -119,6 +162,27 @@ function love.draw()
     -- Draw Player
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("@", cursor.x * CELL_SIZE, cursor.y * CELL_SIZE)
+
+    -- Draw Movement Star
+       -- if number > 0
+       -- cells in star have white square, and number is black
+       -- Look at checkGameOver
+    -- for all cells adjacent to cursor
+    for dy = -1, 1 do
+        for dx = -1, 1 do
+	    -- if cells are not already eaten
+            if not (dx == 0 and dy == 0) then
+                local tx, ty = cursor.x + dx, cursor.y + dy
+		-- if adjacent space is uneaten and within bounds
+                if tx >= 1 and tx <= WID and ty >= 1 and ty <= HEI then
+                    local steps = board[ty][tx]
+                    if steps > 0 and countSteps(steps, dx, dy) then
+                        drawMovementStar(steps, dx, dy)
+                    end
+                end
+            end
+        end
+    end
 
     -- Draw Score
     love.graphics.setColor(0, 1, 0)
