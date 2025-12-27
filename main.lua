@@ -1,7 +1,7 @@
 -- Constants
 local WID, HEI = 50,30
 local NCOUNT = WID * HEI
-local CELL_SIZE = 15 -- Adjust for screen scale
+local CELL_SIZE = 12 -- Adjust for screen scale
 -- lua arrays start at 1, so I can just write RGBA values in slots 1 to 9
 -- DEFAULT config
 -- 1 = brown
@@ -29,7 +29,10 @@ local COLORS = {
 local board = {}
 local cursor = { x = 1, y = 1 }
 local score = 0
+local upgradeThreshold = 0
 local gameOver = false
+local canUpgrade = false
+local upgrades = {}
 
 -- Initialize the board
 function createBoard()
@@ -46,7 +49,9 @@ function createBoard()
     cursor.y = love.math.random(1, HEI)
     board[cursor.y][cursor.x] = 0 -- Player starts on an empty spot
     score = 0
+    upgradeThreshold = 50
     gameOver = false
+    canUpgrade = false
 end
 
 -- Check if a move is valid
@@ -80,7 +85,27 @@ function execute(dx, dy)
             board[cursor.y][cursor.x] = 0
         end
         checkGameOver()
+	checkUpgrade()
     end
+end
+
+function checkUpgrade()
+    if score >= upgradeThreshold then
+        canUpgrade = true
+	upgradeThreshold = upgradeThreshold + 50
+    end
+end
+
+function addQUpgrade()
+   canUpgrade = false
+end
+
+function addWUpgrade()
+   canUpgrade = false
+end
+
+function addEUpgrade()
+   canUpgrade = false
 end
 
 function checkGameOver()
@@ -116,6 +141,14 @@ function love.keypressed(key)
     if gameOver then
         if key == 'y' then createBoard()
         elseif key == 'n' or key == 'escape' then love.event.quit() end
+        return
+    end
+
+    if canUpgrade then
+        if key == 'q' then addQUpgrade()
+        elseif key == 'w' then addWUpgrade() 
+	elseif key == 'e' then addEUpgrade()
+	elseif key == 'escape' then love.event.quit() end
         return
     end
 
@@ -155,7 +188,12 @@ function love.draw()
 		color = COLORS[val]
                 love.graphics.setColor(love.math.colorFromBytes(color[1], color[2], color[3], color[4]))
                 love.graphics.print(val, x * CELL_SIZE, y * CELL_SIZE)
-            end
+	    end    
+	    if val == 0 and (x ~= cursor.x or y ~= cursor.y) then
+                love.graphics.setColor(love.math.colorFromBytes(255, 0, 0, 255))
+        	love.graphics.rectangle("fill", x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        	love.graphics.print(val, x * CELL_SIZE, y * CELL_SIZE)
+	    end
         end
     end
 
@@ -164,9 +202,7 @@ function love.draw()
     love.graphics.print("@", cursor.x * CELL_SIZE, cursor.y * CELL_SIZE)
 
     -- Draw Movement Star
-       -- if number > 0
        -- cells in star have white square, and number is black
-       -- Look at checkGameOver
     -- for all cells adjacent to cursor
     for dy = -1, 1 do
         for dx = -1, 1 do
@@ -195,5 +231,13 @@ function love.draw()
         love.graphics.rectangle("fill", 200, 100, 400, 100)
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf("GAME OVER\nPLAY AGAIN (Y/N)?", 200, 120, 400, "center")
+    end
+
+    -- Upgrade Overlay
+    if canUpgrade then
+        love.graphics.setColor(0, 0, 0, 0.8)
+        love.graphics.rectangle("fill", 200, 100, 400, 200)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf("UPGRADES", 200, 120, 400, "center")
     end
 end
