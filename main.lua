@@ -1,7 +1,7 @@
 -- Constants
-local WID, HEI = 50,30
+local WID, HEI = 30, 30
 local NCOUNT = WID * HEI
-local CELL_SIZE = 12 -- Adjust for screen scale
+local CELL_SIZE = 15 -- Adjust for screen scale
 -- lua arrays start at 1, so I can just write RGBA values in slots 1 to 9
 -- DEFAULT config
 -- 1 = brown
@@ -29,10 +29,13 @@ local COLORS = {
 local board = {}
 local cursor = { x = 1, y = 1 }
 local score = 0
+local mulls = 0
 local upgradeThreshold = 0
+local upgrades = {}
+
 local gameOver = false
 local canUpgrade = false
-local upgrades = {}
+local mulliganMode = false
 
 -- Initialize the board
 function createBoard()
@@ -50,8 +53,10 @@ function createBoard()
     board[cursor.y][cursor.x] = 0 -- Player starts on an empty spot
     score = 0
     upgradeThreshold = 50
+    mulls = 4
     gameOver = false
     canUpgrade = false
+    mulliganMode = false
 end
 
 -- Check if a move is valid
@@ -69,6 +74,25 @@ function countSteps(steps, dx, dy)
         end
     end
     return true
+end
+
+-- Swap adjacent numbers
+function mulligan(dx, dy)
+-- goes into a "mulligan" state where the cursor highlights adjacent squares. 
+-- E.G pressing s then w changes the w number
+    
+    -- if 0,0 then toggle mulliganMode
+    if dx == 0 and dy == 0 then 
+        mulliganMode = not mulliganMode 
+    elseif mulls > 0 then
+        -- get cell on board
+        local tx, ty = cursor.x, cursor.y
+        tx = tx + dx
+        ty = ty + dy
+        -- re-roll cell
+        board[ty][tx] = love.math.random(1, 9)
+        mulls = mulls - 1
+    end
 end
 
 -- Execute movement logic
@@ -91,8 +115,8 @@ end
 
 function checkUpgrade()
     if score >= upgradeThreshold then
-        canUpgrade = true
-	upgradeThreshold = upgradeThreshold + 50
+--        canUpgrade = true
+	upgradeThreshold = upgradeThreshold + (upgradeThreshold * 1.5)
     end
 end
 
@@ -147,35 +171,33 @@ function love.keypressed(key)
     if canUpgrade then
         if key == 'q' then addQUpgrade()
         elseif key == 'w' then addWUpgrade() 
-	elseif key == 'e' then addEUpgrade()
-	elseif key == 'escape' then love.event.quit() end
+	    elseif key == 'e' then addEUpgrade()
+	    elseif key == 'escape' then love.event.quit() end
         return
-    end
-
-    -- Key Mapping (Matching your QWE/A D/YXC layout)
-        if key == 'q' then execute(-1, -1)
-    elseif key == 'w' then execute(0, -1)
-    elseif key == 'e' then execute(1, -1)
-    elseif key == 'a' then execute(-1, 0)
-    elseif key == 'd' then execute(1, 0)
-    elseif key == 'z' then execute(-1, 1)
-    elseif key == 'x' then execute(0, 1)
-    elseif key == 'c' then execute(1, 1)
-    elseif key == "escape" then love.event.quit()
-    end
-end
-
-function drawMovementStar(steps, dx, dy)
-    local tx,ty = cursor.x, cursor.y 
-    for i = 1, steps do
-	-- increment along x
-        tx = tx + dx
-	-- increment along y
-        ty = ty + dy
-        local val = board[ty][tx]
-        -- draw rectangle outline
-        love.graphics.rectangle("line", tx * CELL_SIZE, ty * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-        love.graphics.print(val, tx * CELL_SIZE, ty * CELL_SIZE)
+    elseif mulliganMode then
+            if key == 'q' then mulligan(-1, -1)
+        elseif key == 'w' then mulligan(0, -1)
+        elseif key == 'e' then mulligan(1, -1)
+        elseif key == 'a' then mulligan(-1, 0)
+        elseif key == 's' then mulligan(0, 0)
+        elseif key == 'd' then mulligan(1, 0)
+        elseif key == 'z' then mulligan(-1, 1)
+        elseif key == 'x' then mulligan(0, 1)
+        elseif key == 'c' then mulligan(1, 1)
+	    end
+    else
+        -- Key Mapping (Matching your QWE/A D/YXC layout)
+            if key == 'q' then execute(-1, -1)
+        elseif key == 'w' then execute(0, -1)
+        elseif key == 'e' then execute(1, -1)
+        elseif key == 'a' then execute(-1, 0)
+        elseif key == 's' then mulligan(0, 0)
+        elseif key == 'd' then execute(1, 0)
+        elseif key == 'z' then execute(-1, 1)
+        elseif key == 'x' then execute(0, 1)
+        elseif key == 'c' then execute(1, 1)
+        elseif key == "escape" then love.event.quit()
+        end
     end
 end
 
@@ -203,17 +225,37 @@ function love.draw()
 
     -- Draw Movement Star
        -- cells in star have white square, and number is black
-    -- for all cells adjacent to cursor
-    for dy = -1, 1 do
-        for dx = -1, 1 do
-	    -- if cells are not already eaten
-            if not (dx == 0 and dy == 0) then
-                local tx, ty = cursor.x + dx, cursor.y + dy
-		-- if adjacent space is uneaten and within bounds
-                if tx >= 1 and tx <= WID and ty >= 1 and ty <= HEI then
-                    local steps = board[ty][tx]
-                    if steps > 0 and countSteps(steps, dx, dy) then
-                        drawMovementStar(steps, dx, dy)
+    if mulliganMode == false then
+        -- for all cells adjacent to cursor
+        for dy = -1, 1 do
+            for dx = -1, 1 do
+    	        -- if cells are not already eaten
+                if not (dx == 0 and dy == 0) then
+                    local tx, ty = cursor.x + dx, cursor.y + dy
+    		        -- if adjacent space is uneaten and within bounds
+                    if tx >= 1 and tx <= WID and ty >= 1 and ty <= HEI then
+                        local steps = board[ty][tx]
+                        if steps > 0 and countSteps(steps, dx, dy) then
+                            drawMovementStar(steps, dx, dy)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if mulliganMode == true then
+        for dy = -1, 1 do
+            for dx = -1, 1 do
+    	        -- if cells are not already eaten
+                if not (dx == 0 and dy == 0) then
+                    local tx, ty = cursor.x + dx, cursor.y + dy
+    		        -- if adjacent space is uneaten and within bounds
+                    if tx >= 1 and tx <= WID and ty >= 1 and ty <= HEI then
+                        local steps = board[ty][tx]
+                        if steps > 0 then
+                            drawMulliganSquare(dx, dy)
+                        end
                     end
                 end
             end
@@ -240,4 +282,30 @@ function love.draw()
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf("UPGRADES", 200, 120, 400, "center")
     end
+end
+
+function drawMovementStar(steps, dx, dy)
+    local tx,ty = cursor.x, cursor.y 
+    for i = 1, steps do
+	-- increment along x
+        tx = tx + dx
+	-- increment along y
+        ty = ty + dy
+        local val = board[ty][tx]
+        -- draw rectangle outline
+        love.graphics.rectangle("line", tx * CELL_SIZE, ty * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        love.graphics.print(val, tx * CELL_SIZE, ty * CELL_SIZE)
+    end
+end
+
+function drawMulliganSquare(dx, dy)
+    local tx,ty = cursor.x, cursor.y 
+    
+    tx = tx + dx
+    ty = ty + dy
+    local val = board[ty][tx]
+    -- draw rectangle outline
+    love.graphics.setColor(1, 0, 0, 1)
+    love.graphics.rectangle("line", tx * CELL_SIZE, ty * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+    love.graphics.print(val, tx * CELL_SIZE, ty * CELL_SIZE)
 end
