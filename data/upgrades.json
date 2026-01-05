@@ -1,0 +1,17 @@
+{
+ "common": [
+     {
+         "name": "One Up",
+         "description": "+1 to score when path contains a 1",
+         "effect": ""
+     }
+ ],
+ "uncommon": [
+     {
+     }
+ ],
+ "rare": [
+     {
+     }
+ ]
+}
