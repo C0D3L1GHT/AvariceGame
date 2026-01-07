@@ -16,12 +16,10 @@ If you have love2D installed, simply type `love .` in the AvariceGame directory 
 - break apart functionality into 
   - main.lua: main loop
   - data/upgrades.json: upgrades config
-  - src/player.lua: player state for save games
   - src/board.lua: board logic
   - src/upgrades.lua: logic for upgrades
 
 - add upgrade logic
-  - use tiny-ecs (https://love2d.org/wiki/tiny-ecs)
 - add a bunch of upgrades
 
 - add music and sfx
