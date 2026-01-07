@@ -1,7 +1,0 @@
-all adjacent squares turn to 1
-if you land on 9, clear all 9's
-you are playing Go now. Numbers you surround are now 0's
-
-set it like blackjack so you are trying to get to 21 but not bust
-
-
